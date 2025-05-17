@@ -330,12 +330,19 @@ class AppState: ObservableObject {
         let fileExtension = originalURL.pathExtension
         let sanitizedName = String(newNameSuggestion.prefix(100))
         
-        let newFileName = "\(sanitizedName).\(fileExtension)"
-        let newPath = directory.appendingPathComponent(newFileName).path
-        
+        var newFileName = "\(sanitizedName).\(fileExtension)"
+        var newPath = directory.appendingPathComponent(newFileName).path
+
         if newPath == originalPath {
             print("AppState: Suggested new name is same as original or file already named as such. No rename needed for \(originalPath).")
             return
+        }
+
+        var attempt = 1
+        while fileManager.fileExists(atPath: newPath) {
+            newFileName = "\(sanitizedName)_\(attempt).\(fileExtension)"
+            newPath = directory.appendingPathComponent(newFileName).path
+            attempt += 1
         }
 
         do {
