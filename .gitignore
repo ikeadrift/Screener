@@ -1,0 +1,19 @@
+# macOS temporary files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Xcode build artifacts and derived data
+build/
+DerivedData/
+.build/
+
+# User-specific Xcode data
+*/xcuserdata/
+
+# Other Xcode temporary files
+*.xcuserstate
