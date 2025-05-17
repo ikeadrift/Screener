@@ -215,10 +215,11 @@ class ScreenshotObserver {
     private func isValidScreenshot(filePath: String) -> Bool {
         let url = URL(fileURLWithPath: filePath)
         let standardizedPath = url.path
+        let fileExists = FileManager.default.fileExists(atPath: standardizedPath)
         let fileExtension = (standardizedPath as NSString).pathExtension.lowercased()
         let imageExtensions = ["png", "jpg", "jpeg", "tiff", "bmp", "gif"]
         let hasImageExtension = imageExtensions.contains(fileExtension)
-        return hasImageExtension
+        return fileExists && hasImageExtension
     }
 
 
