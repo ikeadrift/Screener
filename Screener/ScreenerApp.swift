@@ -59,6 +59,7 @@ class AppState: ObservableObject {
 
     @Published var isMonitoring: Bool = false
     private var screenshotObserver: ScreenshotObserver?
+    private var monitoringAccessStarted: Bool = false
 
     @Published var isShowingApiKeyEditor: Bool = false {
         didSet { if isShowingApiKeyEditor { NSApp.activate(ignoringOtherApps: true) } }
@@ -118,20 +119,13 @@ class AppState: ObservableObject {
 
     private func setupObserver(path: String?) {
         screenshotObserver?.stop()
-        if let validPath = path, FileManager.default.fileExists(atPath: validPath), FileManager.default.isDirectory(atPath: validPath) {
-            // Start accessing before creating observer
-            if let url = securityScopedWatchedURL, url.startAccessingSecurityScopedResource() {
-                print("Started accessing security scoped resource: \(url.path)")
-                screenshotObserver = ScreenshotObserver(path: validPath, callback: handleNewScreenshot)
-                // Note: stopAccessingSecurityScopedResource() should be called when monitoring stops or observer is deinited
-            } else {
-                print("Could not start accessing security-scoped resource for path: \(validPath). Observer not created.")
-                if securityScopedWatchedURL != nil { securityScopedWatchedURL = nil } // Clear if access failed
-                // self.isMonitoring = false // Ensure monitoring is off
-            }
+        if let validPath = path,
+           FileManager.default.fileExists(atPath: validPath),
+           FileManager.default.isDirectory(atPath: validPath) {
+            screenshotObserver = ScreenshotObserver(path: validPath, callback: handleNewScreenshot)
         } else {
-            print("Watched folder path (\(path ?? "nil")) is invalid or not set. Observer not created.")
-            // self.isMonitoring = false // Ensure monitoring is off
+            screenshotObserver = nil
+            print("Watched folder path (\(path ?? \"nil\")) is invalid or not set. Observer not created.")
         }
     }
 
@@ -165,30 +159,36 @@ class AppState: ObservableObject {
             return
         }
         
-        // Ensure observer is set up with the potentially newly resolved/accessed URL
-        // Access will be started within setupObserver if needed
-        setupObserver(path: url.path) 
-        
-        if screenshotObserver != nil && (securityScopedWatchedURL?.startAccessingSecurityScopedResource() ?? false) {
+        // Set up the observer before starting access
+        setupObserver(path: url.path)
+
+        guard screenshotObserver != nil else {
+            isMonitoring = false
+            print("Failed to start monitoring: Observer not initialized.")
+            return
+        }
+
+        monitoringAccessStarted = url.startAccessingSecurityScopedResource()
+        if monitoringAccessStarted {
             screenshotObserver?.start()
             isMonitoring = true
             print("Screenshot monitoring started for path: \(url.path).")
         } else {
             isMonitoring = false
-            print("Failed to start monitoring: Observer not initialized or could not access folder.")
-            if !(securityScopedWatchedURL?.startAccessingSecurityScopedResource() ?? true) { // if access failed
-                 self.isShowingFolderPicker = true // Prompt to re-select folder
-            }
+            screenshotObserver = nil
+            print("Failed to start monitoring: Could not access folder.")
+            self.isShowingFolderPicker = true
         }
     }
 
     func stopMonitoring() {
         screenshotObserver?.stop()
-        isMonitoring = false
-        if let url = securityScopedWatchedURL {
+        if monitoringAccessStarted, let url = securityScopedWatchedURL {
             url.stopAccessingSecurityScopedResource()
+            monitoringAccessStarted = false
             print("Stopped accessing security scoped resource: \(url.path)")
         }
+        isMonitoring = false
         print("Screenshot monitoring stopped.")
     }
     
