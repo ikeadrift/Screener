@@ -89,7 +89,7 @@ class OpenAIService {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let payload: [String: Any] = [
-            "model": "gpt-4o-mini", // Specify the model
+            "model": "gpt-5-nano", // Specify the model
             "messages": [
                 [
                     "role": "user",
